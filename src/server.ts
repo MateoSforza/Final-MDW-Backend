@@ -8,9 +8,8 @@ dotenv.config();
 
 const app: Application = express();
 
-// ⛔ ESTO ES CLAVE:
 app.use(cors());
-app.use(express.json());   // <-- ESTE MIDDLEWARE TIENE QUE ESTAR
+app.use(express.json());
 
 // Conexión MongoDB
 const mongoUri = process.env.MONGODB_URI;
