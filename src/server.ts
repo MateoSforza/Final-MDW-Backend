@@ -4,6 +4,9 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import authRoutes from "./routes/auth.routes";
 import actividadRoutes from "./routes/actividad.routes";
+import sesionRoutes from "./routes/sesion.routes";
+
+
 
 
 dotenv.config();
@@ -32,6 +35,8 @@ app.get("/", (req: Request, res: Response) => {
 // Rutas reales
 app.use("/api/auth", authRoutes);
 app.use("/api/actividades", actividadRoutes);
+app.use("/api/sesiones", sesionRoutes);
+
 
 const PORT = Number(process.env.PORT) || 3000;
 
