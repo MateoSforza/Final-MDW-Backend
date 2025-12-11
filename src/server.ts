@@ -5,9 +5,7 @@ import mongoose from "mongoose";
 import authRoutes from "./routes/auth.routes";
 import actividadRoutes from "./routes/actividad.routes";
 import sesionRoutes from "./routes/sesion.routes";
-
-
-
+import { errorHandler } from "./middlewares/errorHandler";
 
 dotenv.config();
 
@@ -27,7 +25,7 @@ mongoose
   .then(() => console.log("🟢 MongoDB conectado"))
   .catch((err) => console.error("🔴 Error MongoDB:", err));
 
-// Ruta de prueba
+// Ruta de prueba / healthcheck simple
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Backend funcionando" });
 });
@@ -37,6 +35,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/actividades", actividadRoutes);
 app.use("/api/sesiones", sesionRoutes);
 
+// Middleware de errores SIEMPRE al final
+app.use(errorHandler);
 
 const PORT = Number(process.env.PORT) || 3000;
 

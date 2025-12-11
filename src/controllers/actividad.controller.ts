@@ -1,14 +1,17 @@
 import { Response } from "express";
 import Actividad from "../models/Actividad";
-import { AuthRequest } from "../middlewares/auth.middleware";
+import { AuthRequest } from "../middlewares/authJwt";
+import { asyncHandler } from "../middlewares/asyncHandler";
+import { badRequest, notFound } from "../utils/ApiError";
 
 // GET /api/actividades
-export const getActividades = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
+export const getActividades = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      throw badRequest("Usuario no autenticado");
+    }
+
+    const usuarioId = req.user.id;
 
     const actividades = await Actividad.find({
       usuarioId,
@@ -16,27 +19,25 @@ export const getActividades = async (
     }).sort({ creadaEn: -1 });
 
     res.json(actividades);
-  } catch (error) {
-    console.error(error);
-    const err = error as Error;
-    res
-      .status(500)
-      .json({ message: "Error al obtener actividades", error: err.message });
   }
-};
+);
 
 // POST /api/actividades
-export const crearActividad = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
-    const { nombre, categoria, color } = req.body;
+export const crearActividad = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      throw badRequest("Usuario no autenticado");
+    }
+
+    const usuarioId = req.user.id;
+    const { nombre, categoria, color } = req.body as {
+      nombre?: string;
+      categoria?: string;
+      color?: string;
+    };
 
     if (!nombre) {
-      res.status(400).json({ message: "El nombre es obligatorio" });
-      return;
+      throw badRequest("El nombre es obligatorio");
     }
 
     const nuevaActividad = new Actividad({
@@ -48,24 +49,24 @@ export const crearActividad = async (
 
     const guardada = await nuevaActividad.save();
     res.status(201).json(guardada);
-  } catch (error) {
-    console.error(error);
-    const err = error as Error;
-    res
-      .status(500)
-      .json({ message: "Error al crear actividad", error: err.message });
   }
-};
+);
 
 // PUT /api/actividades/:id
-export const actualizarActividad = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
+export const actualizarActividad = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      throw badRequest("Usuario no autenticado");
+    }
+
+    const usuarioId = req.user.id;
     const { id } = req.params;
-    const { nombre, categoria, color, activa } = req.body;
+    const { nombre, categoria, color, activa } = req.body as {
+      nombre?: string;
+      categoria?: string;
+      color?: string;
+      activa?: boolean;
+    };
 
     const actividad = await Actividad.findOneAndUpdate(
       { _id: id, usuarioId },
@@ -74,27 +75,21 @@ export const actualizarActividad = async (
     );
 
     if (!actividad) {
-      res.status(404).json({ message: "Actividad no encontrada" });
-      return;
+      throw notFound("Actividad no encontrada");
     }
 
     res.json(actividad);
-  } catch (error) {
-    console.error(error);
-    const err = error as Error;
-    res
-      .status(500)
-      .json({ message: "Error al actualizar actividad", error: err.message });
   }
-};
+);
 
 // DELETE /api/actividades/:id (baja lógica)
-export const eliminarActividad = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
+export const eliminarActividad = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      throw badRequest("Usuario no autenticado");
+    }
+
+    const usuarioId = req.user.id;
     const { id } = req.params;
 
     const actividad = await Actividad.findOneAndUpdate(
@@ -104,16 +99,9 @@ export const eliminarActividad = async (
     );
 
     if (!actividad) {
-      res.status(404).json({ message: "Actividad no encontrada" });
-      return;
+      throw notFound("Actividad no encontrada");
     }
 
     res.json({ message: "Actividad desactivada correctamente" });
-  } catch (error) {
-    console.error(error);
-    const err = error as Error;
-    res
-      .status(500)
-      .json({ message: "Error al eliminar actividad", error: err.message });
   }
-};
+);

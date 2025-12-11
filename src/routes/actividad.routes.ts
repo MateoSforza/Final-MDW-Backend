@@ -5,13 +5,16 @@ import {
   actualizarActividad,
   eliminarActividad,
 } from "../controllers/actividad.controller";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { verifyToken } from "../middlewares/authJwt";
 
 const router = Router();
 
-router.get("/", authMiddleware, getActividades);
-router.post("/", authMiddleware, crearActividad);
-router.put("/:id", authMiddleware, actualizarActividad);
-router.delete("/:id", authMiddleware, eliminarActividad);
+// Todas las rutas de actividades requieren token
+router.use(verifyToken);
+
+router.get("/", getActividades);
+router.post("/", crearActividad);
+router.put("/:id", actualizarActividad);
+router.delete("/:id", eliminarActividad);
 
 export default router;

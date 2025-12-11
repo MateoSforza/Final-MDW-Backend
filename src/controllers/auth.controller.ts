@@ -1,21 +1,40 @@
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 import Usuario, { IUsuario } from "../models/Usuario";
+import { asyncHandler } from "../middlewares/asyncHandler";
+import { badRequest, unauthorized, internalError } from "../utils/ApiError";
 
-export const register = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { nombre, email, password } = req.body;
+// Cargar variables de entorno en este módulo
+dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error("Falta JWT_SECRET en variables de entorno");
+}
+
+
+export const register = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction) => {
+    const { nombre, email, password } = req.body as {
+      nombre?: string;
+      email?: string;
+      password?: string;
+    };
 
     if (!nombre || !email || !password) {
-      res.status(400).json({ message: "Faltan datos obligatorios" });
-      return;
+      throw badRequest("Faltan datos obligatorios (nombre, email, password)");
     }
 
     const usuarioExiste = await Usuario.findOne({ email });
     if (usuarioExiste) {
-      res.status(400).json({ message: "El email ya está registrado" });
-      return;
+      throw badRequest("El email ya está registrado");
+    }
+
+    if (password.length < 6) {
+      throw badRequest("La contraseña debe tener al menos 6 caracteres");
     }
 
     const hashed = await bcrypt.hash(password, 10);
@@ -28,52 +47,54 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     await nuevoUsuario.save();
 
-    res.status(201).json({ message: "Usuario registrado con éxito" });
-  } catch (error) {
-    console.error(error);
-    const err = error as Error;
-    res
-      .status(500)
-      .json({ message: "Error en el servidor", error: err.message });
+    res.status(201).json({
+      message: "Usuario registrado con éxito",
+      usuario: {
+        id: nuevoUsuario._id,
+        nombre: nuevoUsuario.nombre,
+        email: nuevoUsuario.email,
+      },
+    });
   }
-};
+);
 
-export const login = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, password } = req.body;
+export const login = asyncHandler(
+  async (req: Request, res: Response, _next: NextFunction) => {
+    const { email, password } = req.body as {
+      email?: string;
+      password?: string;
+    };
 
     if (!email || !password) {
-      res.status(400).json({ message: "Faltan datos" });
-      return;
+      throw badRequest("Faltan datos (email y password)");
     }
 
     const usuario = await Usuario.findOne({ email });
 
     if (!usuario) {
-      res.status(400).json({ message: "Credenciales inválidas" });
-      return;
+      throw unauthorized("Credenciales inválidas");
     }
 
     const passwordValida = await bcrypt.compare(password, usuario.password);
 
     if (!passwordValida) {
-      res.status(400).json({ message: "Credenciales inválidas" });
-      return;
+      throw unauthorized("Credenciales inválidas");
     }
 
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error("Falta JWT_SECRET en variables de entorno");
-    }
+    let token: string;
 
-    const token = jwt.sign(
-      {
-        id: usuario._id.toString(),
-        email: usuario.email,
-      },
-      secret,
-      { expiresIn: "7d" }
-    );
+    try {
+      token = jwt.sign(
+        {
+          id: usuario._id.toString(),
+          email: usuario.email,
+        },
+        JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+    } catch (err) {
+      throw internalError("No se pudo generar el token", err);
+    }
 
     res.json({
       message: "Login exitoso",
@@ -84,11 +105,5 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         email: usuario.email,
       },
     });
-  } catch (error) {
-    console.error(error);
-    const err = error as Error;
-    res
-      .status(500)
-      .json({ message: "Error en el servidor", error: err.message });
   }
-};
+);

@@ -2,16 +2,18 @@ import { Router } from "express";
 import {
   getSesiones,
   crearSesion,
-  actualizarSesion,
   eliminarSesion,
 } from "../controllers/sesion.controller";
-import { authMiddleware } from "../middlewares/auth.middleware";
+import { verifyToken } from "../middlewares/authJwt";
 
 const router = Router();
 
-router.get("/", authMiddleware, getSesiones);
-router.post("/", authMiddleware, crearSesion);
-router.put("/:id", authMiddleware, actualizarSesion);
-router.delete("/:id", authMiddleware, eliminarSesion);
+// Todas las rutas de sesiones requieren token
+router.use(verifyToken);
+
+router.get("/", getSesiones);
+router.post("/", crearSesion);
+router.delete("/:id", eliminarSesion);
 
 export default router;
+

@@ -1,120 +1,87 @@
 import { Response } from "express";
-import SesionActividad from "../models/SesionActividad";
-import { AuthRequest } from "../middlewares/auth.middleware";
+import { AuthRequest } from "../middlewares/authJwt";
+import { asyncHandler } from "../middlewares/asyncHandler";
+import { badRequest, notFound } from "../utils/ApiError";
+import Sesion from "../models/SesionActividad";
 
 // GET /api/sesiones
-export const getSesiones = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
-
-    const sesiones = await SesionActividad.find({ usuarioId })
-      .populate("actividadId", "nombre categoria color")
-      .sort({ fecha: -1 });
-
-    res.json(sesiones);
-  } catch (error) {
-    console.error(error);
-    const err = error as Error;
-    res
-      .status(500)
-      .json({ message: "Error al obtener sesiones", error: err.message });
-  }
-};
-
-// POST /api/sesiones
-export const crearSesion = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
-    const { actividadId, fecha, duracionMinutos, nota } = req.body;
-
-    if (!actividadId || !fecha || !duracionMinutos) {
-      res.status(400).json({
-        message: "actividadId, fecha y duracionMinutos son obligatorios",
-      });
-      return;
+export const getSesiones = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      throw badRequest("Usuario no autenticado");
     }
 
-    const nuevaSesion = new SesionActividad({
+    const usuarioId = req.user.id;
+
+    const sesiones = await Sesion.find({ usuarioId })
+      .sort({ fecha: -1 })
+      .populate("actividadId"); // opcional, si tu schema lo permite
+
+    res.json(sesiones);
+  }
+);
+
+// POST /api/sesiones
+export const crearSesion = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      throw badRequest("Usuario no autenticado");
+    }
+
+    const usuarioId = req.user.id;
+    const { actividadId, fecha, duracionMinutos, nota } = req.body as {
+      actividadId?: string;
+      fecha?: string;
+      duracionMinutos?: number;
+      nota?: string;
+    };
+
+    if (!actividadId || !fecha || !duracionMinutos) {
+      throw badRequest(
+        "actividadId, fecha y duracionMinutos son obligatorios"
+      );
+    }
+
+    const fechaDate = new Date(fecha);
+    if (isNaN(fechaDate.getTime())) {
+      throw badRequest("La fecha no tiene un formato válido");
+    }
+
+    if (duracionMinutos <= 0) {
+      throw badRequest("La duración debe ser mayor a 0");
+    }
+
+    const nuevaSesion = await Sesion.create({
       usuarioId,
       actividadId,
-      fecha,
+      fecha: fechaDate,
       duracionMinutos,
       nota,
     });
 
-    const guardada = await nuevaSesion.save();
-    res.status(201).json(guardada);
-  } catch (error) {
-    console.error(error);
-    const err = error as Error;
-    res
-      .status(500)
-      .json({ message: "Error al crear sesión", error: err.message });
+    res.status(201).json(nuevaSesion);
   }
-};
-
-// PUT /api/sesiones/:id
-export const actualizarSesion = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
-    const { id } = req.params;
-    const { actividadId, fecha, duracionMinutos, nota } = req.body;
-
-    const sesion = await SesionActividad.findOneAndUpdate(
-      { _id: id, usuarioId },
-      { actividadId, fecha, duracionMinutos, nota },
-      { new: true }
-    );
-
-    if (!sesion) {
-      res.status(404).json({ message: "Sesión no encontrada" });
-      return;
-    }
-
-    res.json(sesion);
-  } catch (error) {
-    console.error(error);
-    const err = error as Error;
-    res
-      .status(500)
-      .json({ message: "Error al actualizar sesión", error: err.message });
-  }
-};
+);
 
 // DELETE /api/sesiones/:id
-export const eliminarSesion = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const usuarioId = req.user?.id;
+export const eliminarSesion = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+      throw badRequest("Usuario no autenticado");
+    }
+
+    const usuarioId = req.user.id;
     const { id } = req.params;
 
-    const sesion = await SesionActividad.findOneAndDelete({
+    const sesion = await Sesion.findOneAndDelete({
       _id: id,
       usuarioId,
     });
 
     if (!sesion) {
-      res.status(404).json({ message: "Sesión no encontrada" });
-      return;
+      throw notFound("Sesión no encontrada");
     }
 
     res.json({ message: "Sesión eliminada correctamente" });
-  } catch (error) {
-    console.error(error);
-    const err = error as Error;
-    res
-      .status(500)
-      .json({ message: "Error al eliminar sesión", error: err.message });
   }
-};
+);
