@@ -96,9 +96,16 @@ export const login = asyncHandler(
       throw internalError("No se pudo generar el token", err);
     }
 
+    // Guardar token en cookie HttpOnly
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+    });
+
     res.json({
       message: "Login exitoso",
-      token,
       usuario: {
         id: usuario._id,
         nombre: usuario.nombre,
@@ -107,3 +114,13 @@ export const login = asyncHandler(
     });
   }
 );
+
+export const logout = asyncHandler(async (_req: Request, res: Response, _next: NextFunction) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+
+  res.json({ message: "Logout exitoso" });
+});

@@ -18,14 +18,16 @@ if (!JWT_SECRET) {
 export function verifyToken(req: AuthRequest, _res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
-    throw unauthorized("Token no proporcionado");
+  let token: string | undefined;
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  } else if ((req as any).cookies && (req as any).cookies.token) {
+    token = (req as any).cookies.token;
   }
 
-  const [scheme, token] = authHeader.split(" ");
-
-  if (scheme !== "Bearer" || !token) {
-    throw unauthorized("Formato de token inválido");
+  if (!token) {
+    throw unauthorized("Token no proporcionado");
   }
 
   try {

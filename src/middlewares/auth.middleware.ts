@@ -19,12 +19,18 @@ export const authMiddleware = (
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    let token: string | undefined;
+
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
+    } else if ((req as any).cookies && (req as any).cookies.token) {
+      token = (req as any).cookies.token;
+    }
+
+    if (!token) {
       res.status(401).json({ message: "No autorizado. Token no provisto." });
       return;
     }
-
-    const token = authHeader.split(" ")[1];
 
     const secret = process.env.JWT_SECRET;
     if (!secret) {
