@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import Usuario, { IUsuario } from "../models/Usuario";
 import { asyncHandler } from "../middlewares/asyncHandler";
 import { badRequest, unauthorized, internalError } from "../utils/ApiError";
+import type { AuthRequest } from "../middlewares/authJwt";
 
 // Cargar variables de entorno en este módulo
 dotenv.config();
@@ -14,7 +15,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   throw new Error("Falta JWT_SECRET en variables de entorno");
 }
-
 
 export const register = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
@@ -115,12 +115,39 @@ export const login = asyncHandler(
   }
 );
 
-export const logout = asyncHandler(async (_req: Request, res: Response, _next: NextFunction) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-  });
+export const logout = asyncHandler(
+  async (_req: Request, res: Response, _next: NextFunction) => {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
 
-  res.json({ message: "Logout exitoso" });
-});
+    res.json({ message: "Logout exitoso" });
+  }
+);
+
+// Nuevo: GET /api/auth/me
+export const me = asyncHandler(
+  async (req: AuthRequest, res: Response, _next: NextFunction) => {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      throw unauthorized("No autenticado");
+    }
+
+    const usuario = await Usuario.findById(userId).select("_id nombre email");
+
+    if (!usuario) {
+      throw unauthorized("Usuario no encontrado");
+    }
+
+    res.json({
+      usuario: {
+        id: usuario._id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+      },
+    });
+  }
+);
