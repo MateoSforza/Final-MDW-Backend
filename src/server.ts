@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+
 import authRoutes from "./routes/auth.routes";
 import actividadRoutes from "./routes/actividad.routes";
 import sesionRoutes from "./routes/sesion.routes";
@@ -12,15 +13,23 @@ dotenv.config();
 
 const app: Application = express();
 
+// Cookies
 app.use(cookieParser());
+
+// CORS (local + producción)
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://final-mdw-frontend.onrender.com"
+];
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true,
   })
 );
 
+// JSON
 app.use(express.json());
 
 // Conexión MongoDB
@@ -34,19 +43,20 @@ mongoose
   .then(() => console.log("🟢 MongoDB conectado"))
   .catch((err) => console.error("🔴 Error MongoDB:", err));
 
-// Ruta de prueba / healthcheck simple
+// Healthcheck
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Backend funcionando" });
 });
 
-// Rutas reales
+// Rutas
 app.use("/api/auth", authRoutes);
 app.use("/api/actividades", actividadRoutes);
 app.use("/api/sesiones", sesionRoutes);
 
-// Middleware de errores SIEMPRE al final
+// Middleware de errores (siempre al final)
 app.use(errorHandler);
 
+// Puerto
 const PORT = Number(process.env.PORT) || 3000;
 
 app.listen(PORT, () => {
