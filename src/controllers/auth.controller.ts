@@ -7,7 +7,7 @@ import { asyncHandler } from "../middlewares/asyncHandler";
 import { badRequest, unauthorized, internalError } from "../utils/ApiError";
 import type { AuthRequest } from "../middlewares/authJwt";
 
-// Cargar variables de entorno en este módulo
+// Cargar variables de entorno
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -16,6 +16,7 @@ if (!JWT_SECRET) {
   throw new Error("Falta JWT_SECRET en variables de entorno");
 }
 
+// REGISTER
 export const register = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
     const { nombre, email, password } = req.body as {
@@ -58,6 +59,8 @@ export const register = asyncHandler(
   }
 );
 
+
+// LOGIN
 export const login = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
     const { email, password } = req.body as {
@@ -96,12 +99,14 @@ export const login = asyncHandler(
       throw internalError("No se pudo generar el token", err);
     }
 
-    // Guardar token en cookie HttpOnly
+    // CONFIGURACIÓN CORRECTA DE COOKIE PARA PRODUCCIÓN
+    const isProd = process.env.NODE_ENV === "production";
+
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+      secure: isProd,                     // obligatorio en HTTPS (Render)
+      sameSite: isProd ? "none" : "lax",  // clave para cross-domain
+      maxAge: 7 * 24 * 60 * 60 * 1000,    // 7 días
     });
 
     res.json({
@@ -115,19 +120,22 @@ export const login = asyncHandler(
   }
 );
 
+// LOGOUT
 export const logout = asyncHandler(
   async (_req: Request, res: Response, _next: NextFunction) => {
+    const isProd = process.env.NODE_ENV === "production";
+
     res.clearCookie("token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
     });
 
     res.json({ message: "Logout exitoso" });
   }
 );
 
-// Nuevo: GET /api/auth/me
+
 export const me = asyncHandler(
   async (req: AuthRequest, res: Response, _next: NextFunction) => {
     const userId = req.user?.id;
