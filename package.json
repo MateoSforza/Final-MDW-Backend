@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node src/dist/server.js"
   },
   "repository": {
     "type": "git",
@@ -15,7 +16,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/MateoSforza/Final-MDW-Backend/issues"
   },
@@ -32,11 +32,11 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
-    "@types/cookie-parser": "^1.4.10",
+    "@types/cookie-parser": "1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^24.10.4",
+    "@types/node": "^24.10.2",
     "cookie-parser": "^1.4.7",
     "nodemon": "^3.1.11",
     "ts-node-dev": "^2.0.0",
